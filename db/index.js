@@ -28,7 +28,7 @@ const maxConnectionAge = moment.duration(10, "minutes").asSeconds();
 const pool = {
   handleDisconnects: true,
   min: 1, // Keep one connection open
-  max: 50, // Max 10 connections
+  max: 100, // Max 10 connections
   idle: 9000, // 9 secondes
   validate: (obj) => {
     // Recycle connexions periodically
