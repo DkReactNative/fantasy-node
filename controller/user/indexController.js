@@ -14,139 +14,149 @@ const { floor, round } = require("lodash");
 
 
 const getMatchList = async function (req, res) {
-  let status = false;
-  let message = null;
+  try {
+    let status = false;
+    let message = null;
 
-  let currentDate = formatedDate(
-    new Date("2020-08-21T23:42:35.000Z"),
-    "YYYY-MM-DD"
-  );
-  let oneMonthDate = addDate(new Date(), 10, "days", "YYYY-MM-DD");
-  let currentTime = formatedDate(new Date(), "HH:MM");
+    let currentDate = formatedDate(
+      new Date(),
+      "YYYY-MM-DD"
+    );
+    let oneMonthDate = addDate(new Date(), 10, "days", "YYYY-MM-DD");
+    let currentTime = formatedDate(new Date(), "HH:MM");
 
-  // set server Time Start
-  let serverTimeZone = "UTC";
-  let timeZone = "UTC";
-  let currentDatTime = formatedDate(new Date(), "YYYY-MM-DD HH:MM:SS");
-  let time = new Date();
-  let serverTime = new Date();
-  // set server Time End
+    // set server Time Start
+    let serverTimeZone = "UTC";
+    let timeZone = "UTC";
+    let currentDatTime = formatedDate(new Date(), "YYYY-MM-DD HH:MM:SS");
+    let time = new Date();
+    let serverTime = new Date();
+    // set server Time End
 
-  let decoded = req.body
-  console.log(decoded)
-  if (decoded.user_id) {
-    console.log(currentDate);
+    let decoded = req.body
+    console.log(decoded)
+    if (decoded.user_id) {
+      console.log(currentDate);
 
-    let filter = {
-      localteam: { [Op.ne]: "TBA" },
-      visitorteam: { [Op.ne]: "TBA" },
-      series_id: { [Op.ne]: 3152 },
-      [Op.or]: [
-        {
-          date: { [Op.gt]: currentDate + "" },
-          time: { [Op.gte]: currentTime + "" },
-        },
-        {
-          date: { [Op.between]: [currentDate + "", oneMonthDate + ""] },
-        },
-      ],
-      status: 1,
-    };
+      let filter = {
+        localteam: { [Op.ne]: "TBA" },
+        visitorteam: { [Op.ne]: "TBA" },
+        series_id: { [Op.ne]: 3152 },
+        [Op.or]: [
+          {
+            date: { [Op.gt]: currentDate + "" },
+            time: { [Op.gte]: currentTime + "" },
+          },
+          {
+            date: { [Op.between]: [currentDate + "", oneMonthDate + ""] },
+          },
+        ],
+        status: 1,
+      };
 
-    let data = await SeriesSquad.findAll({
-      include: [
-        {
-          model: Series,
-          required: true,
-          // attributes: ["id"],
-          where: { status: 1 },
-        },
-        {
-          model: MstTeams,
-          // required: true,
-          as: "VisitorMstTeams",
-        },
-        {
-          model: MstTeams,
-          // attributes: ["id"],
-          // required: true,
-          as: "LocalMstTeams",
-        },
-      ],
-      where: filter,
-      // raw: true,
-      group: ["match_id"],
-      order: ['date', 'time']
-    });
+      let data = await SeriesSquad.findAll({
+        include: [
+          {
+            model: Series,
+            required: true,
+            // attributes: ["id"],
+            where: { status: 1 },
+          },
+          {
+            model: MstTeams,
+            // required: true,
+            as: "VisitorMstTeams",
+          },
+          {
+            model: MstTeams,
+            // attributes: ["id"],
+            // required: true,
+            as: "LocalMstTeams",
+          },
+        ],
+        where: filter,
+        // raw: true,
+        group: ["match_id"],
+        order: ['date', 'time']
+      });
 
-    let matchContestArray = await MatchContest.count({
-      group: ["match_id"],
-      raw: true,
-    });
+      let matchContestArray = await MatchContest.count({
+        group: ["match_id"],
+        raw: true,
+      });
 
-    let matchContestObject = {};
+      let matchContestObject = {};
 
-    matchContestArray.map((ele) => {
-      matchContestObject[ele.match_id] = ele.count;
-    });
+      matchContestArray.map((ele) => {
+        matchContestObject[ele.match_id] = ele.count;
+      });
 
-    //console.log("matchContest ------------>", data);
+      //console.log("matchContest ------------>", data);
 
-    data = data.map((ele) => {
-      let obj = {};
-      obj.total_contest = matchContestObject[ele.id]
-        ? matchContestObject[ele.id]
-        : 0;
-      obj["is_lineup"] = ele.is_lineup;
-      obj["series_id"] = ele.series_id;
-      obj.mega_prize = ele.mega_prize ? ele.mega_prize : 0;
-      obj.match_id = ele.match_id;
-      obj.guru_url = ele.guru_url ? guru_url : "";
-      obj["series_name"] = ele.series
-        ? ele.series.short_name
+      data = data.map((ele) => {
+        let obj = {};
+        obj.total_contest = matchContestObject[ele.id]
+          ? matchContestObject[ele.id]
+          : 0;
+        obj["is_lineup"] = ele.is_lineup;
+        obj["series_id"] = ele.series_id;
+        obj.mega_prize = ele.mega_prize ? ele.mega_prize : 0;
+        obj.match_id = ele.match_id;
+        obj.guru_url = ele.guru_url ? guru_url : "";
+        obj["series_name"] = ele.series
           ? ele.series.short_name
-          : ele.series.name.replace("Cricket ", "")
-        : "";
-      obj["local_team_id"] = ele.localteam_id;
-      // console.log(ele)
-      obj["local_team_name"] =
-        ele.LocalMstTeams && ele.LocalMstTeams.team_short_name
-          ? ele.LocalMstTeams.team_short_name
-          : ele.localteam;
-      obj["local_team_flag"] =
-        ele.LocalMstTeams && ele.LocalMstTeams.flag
-          ? process.env.FLAGIMAGEURL + ele.LocalMstTeams.flag
+            ? ele.series.short_name
+            : ele.series.name.replace("Cricket ", "")
           : "";
-      obj["visitor_team_id"] = ele.visitorteam_id;
-      obj["visitor_team_name"] =
-        ele.VisitorMstTeams && ele.VisitorMstTeams.team_short_name
-          ? ele.VisitorMstTeams.team_short_name
-          : ele.localteam;
-      obj["visitor_team_flag"] =
-        ele.VisitorMstTeams && ele.VisitorMstTeams.flag
-          ? process.env.FLAGIMAGEURL + ele.VisitorMstTeams.flag
-          : "";
-      obj["star_date"] = new Date(ele.date);
-      obj["star_time"] = ele.time;
-      obj["server_time"] = new Date();
-      return obj;
-    });
-    let response = {};
-    response.upcoming_match = data;
-    response.live_match = [];
-    response.completed_match = [];
-    response.version_code = req.body.version;
-    response.apk_url = "";
-    response.update_type = 1;
-    response.update_text =
-      "<ul><li>&nbsp;Introduced Leaderboard</li><li>&nbsp;Cash Back Offer</li><li>&nbsp;Bugs fixes and enhancements</li></ul>";
-    response.popup_image = "";
-    response.popup_on = 1;
-    correctResponse(res, 200, message, response, true);
+        obj["local_team_id"] = ele.localteam_id;
+        // console.log(ele)
+        obj["local_team_name"] =
+          ele.LocalMstTeams && ele.LocalMstTeams.team_short_name
+            ? ele.LocalMstTeams.team_short_name
+            : ele.localteam;
+        obj["local_team_flag"] =
+          ele.LocalMstTeams && ele.LocalMstTeams.flag
+            ? process.env.FLAGIMAGEURL + ele.LocalMstTeams.flag
+            : "";
+        obj["visitor_team_id"] = ele.visitorteam_id;
+        obj["visitor_team_name"] =
+          ele.VisitorMstTeams && ele.VisitorMstTeams.team_short_name
+            ? ele.VisitorMstTeams.team_short_name
+            : ele.localteam;
+        obj["visitor_team_flag"] =
+          ele.VisitorMstTeams && ele.VisitorMstTeams.flag
+            ? process.env.FLAGIMAGEURL + ele.VisitorMstTeams.flag
+            : "";
+        obj["star_date"] = new Date(ele.date);
+        obj["star_time"] = ele.time;
+        obj["server_time"] = formatedDate(new Date(), "YYYY-MM-DD HH:MM:SS");
+        return obj;
+      });
+      let response = {};
+      response.upcoming_match = data;
+      response.live_match = [];
+      response.completed_match = [];
+      response.version_code = +req.body.version ? +req.body.version : req.body.version;
+      response.apk_url = "";
+      response.update_type = 1;
+      response.update_text =
+        "<ul><li>&nbsp;Introduced Leaderboard</li><li>&nbsp;Cash Back Offer</li><li>&nbsp;Bugs fixes and enhancements</li></ul>";
+      response.popup_image = "";
+      response.popup_on = +0;
+      // correctResponse(res, 200, message, { response: response }, true);
+      let response_data = { response: { 'status': true, 'tokenexpire': 0, 'message': message, 'data': response } }
+      res.json(response_data)
+    }
+    else {
+      message = "You are not authenticated user."
+      correctResponse(res, 400, message, { response: {} }, false);
+      let response_data = { response: { 'status': status, 'tokenexpire': 0, 'message': message, 'data': {} } }
+      res.json(response_data)
+    }
   }
-  else {
-    message = "You are not authenticated user."
-    correctResponse(res, 400, message, {}, false);
+  catch (err) {
+    let response_data = { response: { 'status': false, 'tokenexpire': 0, 'message': err.message || "Something went wrong", 'data': {} } }
+    res.json(response_data)
   }
 };
 
@@ -238,11 +248,11 @@ const contestpageapi = async function (req, res) {
     } else {
       message = "You are not authenticated user."
     }
-    response_data = { 'status': status, 'tokenexpire': 0, 'message': message, 'data': data1 }
+    response_data = { response: { 'status': status, 'tokenexpire': 0, 'message': message, 'data': data1 } }
     res.json(response_data)
   }
   catch (err) {
-    let response_data = { 'status': false, 'tokenexpire': 0, 'message': err.message || "Something went wrong", 'data': {} }
+    let response_data = { response: { 'status': false, 'tokenexpire': 0, 'message': err.message || "Something went wrong", 'data': {} } }
     res.json(response_data)
   }
 
@@ -466,7 +476,7 @@ const contestList = async function (req, res) {
               contest[contestKey]['dynamic_contest_message'] = dynamic_contest_message;
               contest[contestKey]['is_adjustable'] = ele.contest.is_adjustable;
               contest[contestKey]['breakup_detail_maximum'] = Object.values(customPricemain) || [];
-              contest[contestKey]['first_prize'] = first_prize + "";
+              contest[contestKey]['first_prize'] = first_prize ? +first_prize : 0;
 
             } else {
               await MatchContest.update(
@@ -547,11 +557,11 @@ const contestList = async function (req, res) {
     } else {
       message = "You are not authenticated user."
     }
-    let response_data = { 'status': status, 'tokenexpire': 0, 'message': message, 'data': data1 }
+    let response_data = { response: { 'status': status, 'tokenexpire': 0, 'message': message, 'data': data1 } }
     res.json(response_data)
   } catch (err) {
     console.log(err)
-    let response_data = { 'status': false, 'tokenexpire': 0, 'message': err.message || "Something went wrong", 'data': {} }
+    let response_data = { response: { 'status': false, 'tokenexpire': 0, 'message': err.message || "Something went wrong", 'data': {} } }
     res.json(response_data)
   }
 };
@@ -851,10 +861,10 @@ const contestListAll = async function (req, res) {
     } else {
       message = "You are not authenticated user."
     }
-    let response_data = { 'status': status, 'tokenexpire': 0, 'message': message, 'data': data1 }
+    let response_data = { response: { 'status': status, 'tokenexpire': 0, 'message': message, 'data': data1 } }
     res.json(response_data)
   } catch (err) {
-    let response_data = { 'status': false, 'tokenexpire': 0, 'message': err.message || "Something went wrong", 'data': {} }
+    let response_data = { response: { 'status': false, 'tokenexpire': 0, 'message': err.message || "Something went wrong", 'data': {} } }
     res.json(response_data)
   }
 };
