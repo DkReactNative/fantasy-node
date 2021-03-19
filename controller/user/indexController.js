@@ -237,10 +237,10 @@ const contestpageapi = async function (req, res) {
 
         data1.totalBalance = round(totalBalance, 2);
 
-        data1.my_teams = myTeams;
-        data1.my_nteams = my_nteams;
-        data1.my_tteams = my_tteams;
-        data1.my_contests = myContest.length || 0;
+        data1.my_teams = myTeams.length || 0;
+        data1.my_nteams = my_nteams.length || 0;
+        data1.my_tteams = my_tteams.length || 0;
+        data1.my_contests = myContest.length || 0;;
         status = true;
       } else {
         message = "Match id is empty."
@@ -545,9 +545,9 @@ const contestList = async function (req, res) {
         console.log("myContest ---------->", myContest)
 
         data1.match_contest = Object.values(data);
-        data1.my_teams = myTeams;
-        data1.my_nteams = my_nteams;
-        data1.my_tteams = my_tteams;
+        data1.my_teams = myTeams.length || 0;
+        data1.my_nteams = my_nteams.length || 0;
+        data1.my_tteams = my_tteams.length || 0;
         data1.my_contests = myContest.length || 0;
         status = true;
       }
@@ -780,7 +780,7 @@ const contestListAll = async function (req, res) {
               contest[contestKey]['dynamic_contest_message'] = dynamic_contest_message;
               contest[contestKey]['is_adjustable'] = ele.contest.is_adjustable;
               contest[contestKey]['breakup_detail_maximum'] = Object.values(customPricemain) || [];
-              contest[contestKey]['first_prize'] = first_prize + "";
+              contest[contestKey]['first_prize'] = first_prize ? +first_prize : 0;
 
             } else {
               await MatchContest.update(
